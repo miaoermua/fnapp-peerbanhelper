@@ -3,6 +3,6 @@
     {
         "run-as": "package"
     },
-    "username": "docker-peerbanhelper",
-    "groupname": "docker-peerbanhelper"
+    "username": "peerbanhelper",
+    "groupname": "peerbanhelper"
 }

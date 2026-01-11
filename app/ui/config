@@ -7,7 +7,7 @@
             "protocol": "",
             "port": "9898",
             "url": "/",
-            "allUsers": false
+            "allUsers": true
         }
     }
 }
