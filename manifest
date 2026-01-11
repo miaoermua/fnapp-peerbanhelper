@@ -1,0 +1,10 @@
+appname               = peerbanhelper
+version               = 9.2.3
+display_name          = PeerBanHelper
+desc                  = 自动封禁不受欢迎、吸血和异常的 BT 客户端，并支持自定义规则。
+arch                  = x86_64
+source                = https://github.com/PBH-BTN/PeerBanHelper
+maintainer            = PBH-BTN
+distributor           = miaoermua
+desktop_uidir         = ui
+desktop_applaunchname = peerbanhelper.Application

@@ -1,0 +1,10 @@
+version: "3.9"
+services:
+  peerbanhelper:
+    image: ghostchu/peerbanhelper:v9.2.3
+    restart: unless-stopped
+    container_name: "peerbanhelper"
+    volumes:
+      - "/var/apps/peerbanhelper/shares/peerbanhelper/data:/app/data"
+    network_mode: host
+    stop_grace_period: 30s
