@@ -45,10 +45,6 @@ jobs:
           echo "version=$LATEST_TAG" >> $GITHUB_OUTPUT
           echo "version_number=$VERSION_NUMBER" >> $GITHUB_OUTPUT
           
-          # 检查本仓库是否已有该版本的 Release
-          EXISTING_RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/tags/${LATEST_TAG} || echo "")
-          
-          if [ -z "$EXISTING_RELEASE" ] || [ "$EXISTING_RELEASE" == "null" ]; then
           # 只有在定期检查时才跳过已存在的 Release
           # push 和 workflow_dispatch 时总是构建（允许覆盖）
           if [ "${{ github.event_name }}" == "schedule" ]; then
