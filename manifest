@@ -1,5 +1,5 @@
 appname=peerbanhelper
-version=9.2.3
+version=9.2.5
 display_name=PeerBanHelper
 desc="""自动封禁不受欢迎、吸血和异常的 BT 客户端，并支持自定义规则。"""
 platform=x86
@@ -13,4 +13,4 @@ desktop_uidir=ui
 desktop_applaunchname=peerbanhelper.Application
 service_port=9898
 checkport=true
-changelog=测试
+changelog=正式版
