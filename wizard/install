@@ -16,6 +16,14 @@
         "label": "示例项",
         "rules": [],
         "options": [],
+        "helpText": "<br>"
+      },
+      {
+        "type": "tips",
+        "field": "wizard_default",
+        "label": "示例项",
+        "rules": [],
+        "options": [],
         "helpText": "查看 PeerBanHelper 文档: <a href=\"https://docs.pbh-btn.com/\">https://docs.pbh-btn.com/</a>"
       },
       {
