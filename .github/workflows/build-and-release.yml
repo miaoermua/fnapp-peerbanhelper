@@ -49,11 +49,23 @@ jobs:
           EXISTING_RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/tags/${LATEST_TAG} || echo "")
           
           if [ -z "$EXISTING_RELEASE" ] || [ "$EXISTING_RELEASE" == "null" ]; then
-            echo "需要构建新版本"
-            echo "should_build=true" >> $GITHUB_OUTPUT
+          # 只有在定期检查时才跳过已存在的 Release
+          # push 和 workflow_dispatch 时总是构建（允许覆盖）
+          if [ "${{ github.event_name }}" == "schedule" ]; then
+            # 检查本仓库是否已有该版本的 Release
+            EXISTING_RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/tags/${LATEST_TAG} || echo "")
+            
+            if [ -z "$EXISTING_RELEASE" ] || [ "$EXISTING_RELEASE" == "null" ]; then
+              echo "需要构建新版本"
+              echo "should_build=true" >> $GITHUB_OUTPUT
+            else
+              echo "该版本已存在，跳过构建"
+              echo "should_build=false" >> $GITHUB_OUTPUT
+            fi
           else
-            echo "该版本已存在，跳过构建"
-            echo "should_build=false" >> $GITHUB_OUTPUT
+            # push 和 workflow_dispatch 时总是构建
+            echo "触发方式: ${{ github.event_name }}，总是构建（允许覆盖）"
+            echo "should_build=true" >> $GITHUB_OUTPUT
           fi
 
   build:
@@ -104,6 +116,13 @@ jobs:
           chmod +x build-script.sh
           ./build-script.sh
 
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ env.VERSION_TAG }}
+          path: peerbanhelper-${{ env.VERSION_NUMBER }}.fpk
+          retention-days: 30
+
       - name: 验证构建产物
         run: |
           if [ ! -f "peerbanhelper-${{ env.VERSION_NUMBER }}.fpk" ]; then
@@ -112,7 +131,7 @@ jobs:
           fi
           ls -lh peerbanhelper-${{ env.VERSION_NUMBER }}.fpk
 
-      - name: 创建 Release
+      - name: 创建或更新 Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.VERSION_TAG }}
@@ -131,5 +150,6 @@ jobs:
           files: peerbanhelper-${{ env.VERSION_NUMBER }}.fpk
           draft: false
           prerelease: false
+          overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
