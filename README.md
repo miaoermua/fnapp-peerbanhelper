@@ -1,6 +1,6 @@
 # fnapp-peerbanhelper
 
-飞牛 fnpack 版本 PeerBanHelper，使用 docker 打包
+飞牛 fnpack 版本 PeerBanHelper，使用 docker 打包，支持飞牛 fnOS HTTP 嵌入默认使用 `9898` 端口开放 WebUI。
 
 自动封禁不受欢迎、吸血和异常的 BT 客户端，并支持自定义规则。
 
