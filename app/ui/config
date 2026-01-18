@@ -1,13 +1,18 @@
 {
-    ".url": {
-        "peerbanhelper.Application": {
-            "title": "peerbanhelper",
-            "icon": "images/icon_{0}.png",
-            "type": "url",
-            "protocol": "",
-            "port": "9898",
-            "url": "/",
-            "allUsers": true
-        }
+  ".url": {
+    "peerbanhelper.Application": {
+      "noDisplay": false,
+      "allUsers": false,
+      "fileTypes": [],
+      "control": {
+        "accessPerm": "readonly"
+      },
+      "title": "PeerBanHelper",
+      "icon": "images/icon_{0}.png",
+      "type": "iframe",
+      "protocol": "http",
+      "port": "9898",
+      "url": "/"
     }
+  }
 }

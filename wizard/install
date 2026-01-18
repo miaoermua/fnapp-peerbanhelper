@@ -1,0 +1,31 @@
+[
+  {
+    "stepTitle": "欢迎使用 PBH",
+    "items": [
+      {
+        "type": "tips",
+        "field": "wizard_default",
+        "label": "自动封禁不受欢迎、吸血和异常的 BT 客户端，并支持自定义规则。",
+        "rules": [],
+        "options": [],
+        "helpText": "自动封禁不受欢迎、吸血和异常的 BT 客户端，并支持自定义规则。"
+      },
+      {
+        "type": "tips",
+        "field": "wizard_default",
+        "label": "示例项",
+        "rules": [],
+        "options": [],
+        "helpText": "查看 PeerBanHelper 文档: <a href=\"https://docs.pbh-btn.com/\">https://docs.pbh-btn.com/</a>"
+      },
+      {
+        "type": "tips",
+        "field": "wizard_default",
+        "label": "示例项",
+        "rules": [],
+        "options": [],
+        "helpText": "PeerBanHelper DEMO: <a href=\"https://pbh-demo.pbh-btn.com/\">https://pbh-demo.pbh-btn.com/</a>"
+      }
+    ]
+  }
+]

@@ -1,14 +1,19 @@
-appname               = peerbanhelper
-version               = 9.2.3
-display_name          = PeerBanHelper
-desc                  = 自动封禁不受欢迎、吸血和异常的 BT 客户端，并支持自定义规则。
-arch                  = x86_64
-source                = https://github.com/PBH-BTN/PeerBanHelper
-maintainer            = PBH-BTN
-maintainer_url        = https://github.com/PBH-BTN/PeerBanHelper
-distributor           = miaoermua
-distributor_url       = https://github.com/miaoermua/fnapp-peerbanhelper
-desktop_uidir         = ui
-desktop_applaunchname = peerbanhelper.Application
-service_port          = 9898
-checkport             = true
+appname=peerbanhelper
+version=9.2.3
+display_name=PeerBanHelper
+desc="""自动封禁不受欢迎、吸血和异常的 BT 客户端，并支持自定义规则。
+platform=x86
+source=thirdparty
+maintainer=PBH-BTN
+maintainer_url=https://github.com/PBH-BTN/PeerBanHelper
+distributor=miaoermua
+distributor_url=https://github.com/miaoermua/fnapp-peerbanhelper
+ctl_stop=true
+desktop_uidir=ui
+desktop_applaunchname=peerbanhelper.Application
+service_port=9898
+checkport=true
+changelog=测试
+<alt="homepage" src="https://github.com/PBH-BTN/PeerBanHelper/assets/19235246/d7f7ea9f-70df-40f1-a782-260450972bc9">"""
+<img width="1280" alt="homepage" src="https://github.com/PBH-BTN/PeerBanHelper/assets/19235246/d7f7ea9f-70df-40f1-a782-260450972bc9">"""
+<img src="https://private-user-images.githubusercontent.com/19235246/338955244-d7f7ea9f-70df-40f1-a782-260450972bc9.png">"""
