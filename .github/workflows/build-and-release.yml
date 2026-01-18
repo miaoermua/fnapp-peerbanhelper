@@ -1,0 +1,135 @@
+name: Build and Release PeerBanHelper
+
+on:
+  # 手动触发
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '要构建的版本号（如 v9.2.5）'
+        required: false
+        type: string
+  # 定期检查上游更新（每天 UTC 0 点执行）
+  schedule:
+    - cron: '0 0 * * *'
+  # 仓库推送触发（可选）
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+    outputs:
+      latest-version: ${{ steps.check.outputs.version }}
+      should-build: ${{ steps.check.outputs.should_build }}
+    steps:
+      - name: 检查上游最新版本
+        id: check
+        run: |
+          UPSTREAM_REPO="PBH-BTN/PeerBanHelper"
+          
+          # 获取上游最新标签
+          LATEST_TAG=$(curl -s https://api.github.com/repos/${UPSTREAM_REPO}/tags | \
+            jq -r '.[0].name' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          
+          if [ -z "$LATEST_TAG" ]; then
+            echo "未找到有效的版本标签"
+            exit 1
+          fi
+          
+          # 去除 'v' 前缀获取纯版本号
+          VERSION_NUMBER=${LATEST_TAG#v}
+          
+          echo "上游最新版本: $LATEST_TAG ($VERSION_NUMBER)"
+          echo "version=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "version_number=$VERSION_NUMBER" >> $GITHUB_OUTPUT
+          
+          # 检查本仓库是否已有该版本的 Release
+          EXISTING_RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/tags/${LATEST_TAG} || echo "")
+          
+          if [ -z "$EXISTING_RELEASE" ] || [ "$EXISTING_RELEASE" == "null" ]; then
+            echo "需要构建新版本"
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "该版本已存在，跳过构建"
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: check-upstream
+    if: needs.check-upstream.outputs.should-build == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置版本变量
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
+            # 手动触发且指定了版本
+            VERSION_TAG="${{ github.event.inputs.version }}"
+          else
+            # 使用上游检查的版本
+            VERSION_TAG="${{ needs.check-upstream.outputs.latest-version }}"
+          fi
+          
+          # 确保版本标签格式正确（如有 'v' 前缀）
+          if [[ ! "$VERSION_TAG" =~ ^v ]]; then
+            VERSION_TAG="v${VERSION_TAG}"
+          fi
+          
+          # 提取纯版本号（去除 'v' 前缀）
+          VERSION_NUMBER=${VERSION_TAG#v}
+          
+          echo "VERSION_TAG=$VERSION_TAG" >> $GITHUB_ENV
+          echo "VERSION_NUMBER=$VERSION_NUMBER" >> $GITHUB_ENV
+          echo "IMAGE=ghostchu/peerbanhelper:${VERSION_TAG}" >> $GITHUB_ENV
+          
+          echo "构建版本: $VERSION_TAG"
+          echo "版本号: $VERSION_NUMBER"
+          echo "Docker 镜像: ghostchu/peerbanhelper:${VERSION_TAG}"
+
+      - name: 准备构建环境
+        run: |
+          sudo mkdir -p /usr/local/bin
+          sudo chmod 755 /usr/local/bin
+
+      - name: 执行构建脚本
+        env:
+          IMAGE: ${{ env.IMAGE }}
+          PBH_VERSION: ${{ env.VERSION_NUMBER }}
+        run: |
+          chmod +x build-script.sh
+          ./build-script.sh
+
+      - name: 验证构建产物
+        run: |
+          if [ ! -f "peerbanhelper-${{ env.VERSION_NUMBER }}.fpk" ]; then
+            echo "错误: 构建产物不存在"
+            exit 1
+          fi
+          ls -lh peerbanhelper-${{ env.VERSION_NUMBER }}.fpk
+
+      - name: 创建 Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.VERSION_TAG }}
+          name: PeerBanHelper ${{ env.VERSION_TAG }}
+          body: |
+            ## PeerBanHelper ${{ env.VERSION_TAG }}
+            
+            基于上游 [PBH-BTN/PeerBanHelper@${{ env.VERSION_TAG }}](https://github.com/PBH-BTN/PeerBanHelper/releases/tag/${{ env.VERSION_TAG }}) 构建
+            
+            ### 变更
+            - 版本: ${{ env.VERSION_NUMBER }}
+            - Docker 镜像: `ghostchu/peerbanhelper:${{ env.VERSION_TAG }}`
+            
+            ### 下载
+            下载 `.fpk` 文件并安装到 FNOS 系统。
+          files: peerbanhelper-${{ env.VERSION_NUMBER }}.fpk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
