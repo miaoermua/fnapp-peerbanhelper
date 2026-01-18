@@ -25,7 +25,7 @@ https://github.com/PBH-BTN/PeerBanHelper
 
 ## 说明
 
-本仓库不设任何版本信息，版本信息由上游提供，此仓库使用 CI 自动化构建 fpk 文件（每天晚上 0 点拉取更新信息）。
+本仓库不设任何版本信息，版本信息由上游提供，此仓库使用 CI 自动化构建 fpk 文件（每天晚上 0 点拉取更新信息并覆盖）。
 
 - `@PBH_VERSION@` 是上游版本去掉 v 得到的数字版本，适应 fnpack 的 manifest 的无 v 版本号
 - `@IMAGE@` 是 ghostchu/peerbanhelper + 上版本标签得到的
@@ -34,3 +34,5 @@ https://github.com/PBH-BTN/PeerBanHelper
 
 如果你需要手动构建，
 则 @PBH_VERSION@ 需要替换为 `vX.X.X` 例如 `v9.2.5`，@IMAGE@ 需要替换为 `ghostchu/peerbanhelper:vX.X.X` 例如 `ghostchu/peerbanhelper:v9.2.5`
+
+如果是需要提交 fpk 到应用商店，只需要看 github-actions 创建 release 标签的时间，而不是看文件最后一次修改的时间。
