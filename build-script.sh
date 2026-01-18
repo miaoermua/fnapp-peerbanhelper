@@ -6,8 +6,24 @@ sed -i "s#@PBH_VERSION@#${PBH_VERSION}#g" manifest
 
 # Download and install fnpack
 echo "Downloading fnpack..."
-curl -s -L -o /usr/local/bin/fnpack https://static2.fnnas.com/fnpack/fnpack-1.2.0-linux-amd64
-chmod +x /usr/local/bin/fnpack
+FNPACK_URL="https://static2.fnnas.com/fnpack/fnpack-1.2.0-linux-amd64"
+FNPACK_TMP=$(mktemp)
+
+curl -s -L -f -o "${FNPACK_TMP}" "${FNPACK_URL}"
+if [ $? -ne 0 ] || [ ! -f "${FNPACK_TMP}" ]; then
+    echo "错误: 下载 fnpack 失败"
+    exit 1
+fi
+
+sudo mv "${FNPACK_TMP}" /usr/local/bin/fnpack
+sudo chmod +x /usr/local/bin/fnpack
+
+if ! command -v fnpack &> /dev/null; then
+    echo "错误: fnpack 安装后无法执行"
+    exit 1
+fi
+
+echo "fnpack 安装成功"
 
 # Create package
 echo "Building package..."
