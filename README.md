@@ -8,8 +8,7 @@
 [![COPYING](https://ziadoua.github.io/m3-Markdown-Badges/badges/LicenceGPLv3/licencegplv33.svg)](https://github.com/miaoermua/fnapp-peerbanhelper/blob/main/LICENSE)
 
 
-
-自动封禁不受欢迎、吸血和异常的 BT 客户端，并支持自定义规则。
+BT 反吸血工具 - 自动封禁不受欢迎、吸血和异常的 BT 客户端，并支持自定义规则。支持 qB/qBEE/Deluge/BiglyBT/BitComet
 
 PeerBanHelper 是一个开放源代码的个人网络防火墙安全软件。通过连接支持的应用程序（如：BitTorrent 客户端软件）的 Web API 接口获取受保护应用的连接信息，识别其中可能包含潜在安全威胁的连接并通知对应的应用程序主动断开其连接。
 
