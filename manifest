@@ -1,7 +1,7 @@
 appname=peerbanhelper
-version=9.2.5
+version=@PBH_VERSION@
 display_name=PeerBanHelper
-desc="""自动封禁不受欢迎、吸血和异常的 BT 客户端，并支持自定义规则。"""
+desc="""BT 反吸血工具 - 自动封禁不受欢迎、吸血和异常的 BT 客户端，并支持自定义规则。支持 qB/qBEE/Deluge/BiglyBT/BitComet"""
 platform=all
 source=thirdparty
 maintainer=PBH-BTN
