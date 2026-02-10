@@ -7,4 +7,4 @@ maintainer=PBH-BTN
 distributor=miaoermua
 desktop_uidir=ui
 desktop_applaunchname=peerbanhelper.Application
-platform=all
+platform=x86
