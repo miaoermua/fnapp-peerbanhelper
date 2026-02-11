@@ -1,6 +1,6 @@
 # fnapp-peerbanhelper
 
-飞牛 fnpack 版本 PeerBanHelper，使用 docker 打包，支持飞牛 fnOS HTTP 嵌入默认使用 `9898` 端口开放 WebUI。
+飞牛 fnpack 版本 PeerBanHelper，使用 docker compose 打包，支持飞牛 fnOS amd64&arm64 平台，使用飞牛 fnOS 应用特性 HTTP 嵌入默认使用 `9898` 端口 WebUI。
 
 [![Stars](https://m3-markdown-badges.vercel.app/stars/3/3/miaoermua/fnapp-peerbanhelper)](https://github.com/miaoermua/fnapp-peerbanhelper)
 [![Issues](https://m3-markdown-badges.vercel.app/issues/1/2/miaoermua/fnapp-peerbanhelper)](https://github.com/miaoermua/fnapp-peerbanhelper/issues)
@@ -14,7 +14,7 @@ PeerBanHelper 是一个开放源代码的个人网络防火墙安全软件。通
 
 
 
-https://github.com/PBH-BTN/PeerBanHelper
+PBH ：https://github.com/PBH-BTN/PeerBanHelper
 
 文档: https://docs.pbh-btn.com/docs/category/
 
@@ -22,9 +22,11 @@ https://github.com/PBH-BTN/PeerBanHelper
 
 ![截图 2026-01-18 17-51-14](https://github.com/user-attachments/assets/2a4c78c7-c8dc-413b-829a-75e8a03f97c2)
 
+---
+
 ## 说明
 
-本仓库不设任何版本信息，版本信息由上游提供，此仓库使用 CI 自动化构建 fpk 文件（每天晚上 0 点拉取更新信息并覆盖）。
+本仓库不设任何版本信息，版本信息由上游提供，此仓库使用 CI 自动化构建 fpk 文件（每天晚上 0 点拉取更新 or 手动 push 覆盖）。
 
 - `@PBH_VERSION@` 是上游版本去掉 v 得到的数字版本，适应 fnpack 的 manifest 的无 v 版本号
 - `@IMAGE@` 是 ghostchu/peerbanhelper + 上版本标签得到的
