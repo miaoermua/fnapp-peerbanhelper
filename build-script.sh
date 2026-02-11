@@ -6,7 +6,7 @@ sed -i "s#@PBH_VERSION@#${PBH_VERSION}#g" manifest
 
 # Download and install fnpack
 echo "Downloading fnpack..."
-FNPACK_URL="https://static2.fnnas.com/fnpack/fnpack-1.2.0-linux-amd64"
+FNPACK_URL="https://static2.fnnas.com/fnpack/fnpack-1.2.1-linux-amd64"
 FNPACK_TMP=$(mktemp)
 
 curl -s -L -f -o "${FNPACK_TMP}" "${FNPACK_URL}"
