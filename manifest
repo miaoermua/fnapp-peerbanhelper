@@ -1,7 +1,7 @@
 appname                 =peerbanhelper
 version                 =@PBH_VERSION@
 display_name            =PeerBanHelper
-desc                    =<p>PeerBanHelper: BT 反吸血工具 - 支持: qB/qBEE/Deluge/BiglyBT/BitComet</p><br><p>自动封禁不受欢迎、吸血和异常的 BT 客户端，并支持自定义规则。</p><br><p><a href="https://github.com/PBH-BTN" target="_blank">PBH-BTN 社区</a> | <a href="https://docs.pbh-btn.com" target="_blank">文档</a> | <a href="https://sparkle.pbh-btn.com" target="_blank">BTN 网络</a> | <a href="https://bbs.pbh-btn.com" target="_blank">论坛</a></p>
+desc                    =<p>PeerBanHelper: BT 反吸血工具 - 支持: qB/qBEE/Deluge/BiglyBT/BitComet</p><p>自动封禁不受欢迎、吸血和异常的 BT 客户端，并支持自定义规则。</p><br><p><a href="https://pbh-demo.pbh-btn.com" target="_blank">安装前试用</a> | <a href="https://docs.pbh-btn.com" target="_blank">文档</a> | <a href="https://sparkle.pbh-btn.com" target="_blank">BTN 网络</a> | <a href="https://bbs.pbh-btn.com" target="_blank">论坛</a></p>
 platform                =all
 source                  =thirdparty
 maintainer              =PBH-BTN
