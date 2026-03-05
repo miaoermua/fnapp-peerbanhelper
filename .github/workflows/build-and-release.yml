@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: '要构建的版本号（如 v9.2.5）'
+        description: '要构建的版本号（如 v9.3.8）'
         required: false
         type: string
   schedule:
@@ -23,37 +23,59 @@ jobs:
     outputs:
       latest-version: ${{ steps.check.outputs.version }}
       should-build: ${{ steps.check.outputs.should_build }}
+      changelog: ${{ steps.check.outputs.changelog }}
     steps:
-      - name: 检查上游 PeerBanHelper 最新版本
+      - name: 检查上游最新版本
         id: check
         run: |
           UPSTREAM_REPO="PBH-BTN/PeerBanHelper"
           
-          # 增加 Token 避免速率限制
-          LATEST_TAG=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/${UPSTREAM_REPO}/releases/latest | jq -r '.tag_name')
+          # 获取最新 Release JSON
+          LATEST_JSON=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/${UPSTREAM_REPO}/releases/latest)
+          
+          LATEST_TAG=$(echo "$LATEST_JSON" | jq -r '.tag_name')
 
+          # 如果 latest 接口没拿到，回退到 tags
           if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG" == "null" ]; then
             LATEST_TAG=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
               https://api.github.com/repos/${UPSTREAM_REPO}/tags | jq -r '.[0].name')
+            # 重新获取对应 tag 的 release 信息以拿到 body
+            LATEST_JSON=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              https://api.github.com/repos/${UPSTREAM_REPO}/releases/tags/${LATEST_TAG})
           fi
 
           echo "version=$LATEST_TAG" >> $GITHUB_OUTPUT
 
-          if [ "${{ github.event_name }}" == "schedule" ]; then
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              https://api.github.com/repos/${{ github.repository }}/releases/tags/${LATEST_TAG})
-            
-            if [ "$HTTP_STATUS" -eq 404 ]; then
-              echo "should_build=true" >> $GITHUB_OUTPUT
-              echo "检测到新版本: $LATEST_TAG"
-            else
-              echo "should_build=false" >> $GITHUB_OUTPUT
-              echo "版本 $LATEST_TAG 已存在，跳过"
-            fi
-          else
+          # --- 提取核心更新日志 ---
+          RAW_BODY=$(echo "$LATEST_JSON" | jq -r '.body // ""')
+          
+          if [ -n "$RAW_BODY" ] && [ "$RAW_BODY" != "null" ]; then
+            # 匹配包含 兼容性、修复、功能、改进 的二级标题章节
+            # p 命令打印，最后用 sed '$d' 去掉截取到的下一个章节标题行
+            LOG=$(echo "$RAW_BODY" | sed -n '/##.*\(兼容性\|修复\|功能\|改进\)/,/##/p' | sed '$d')
+          fi
+          
+          if [ -z "$LOG" ]; then
+            LOG="同步上游版本 $LATEST_TAG，详情请查看上游链接。"
+          fi
+
+          # 解决多行变量传递
+          {
+            echo "changelog<<EOF"
+            echo "$LOG"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+          # 检查本地是否存在
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/${{ github.repository }}/releases/tags/${LATEST_TAG})
+          
+          if [ "$HTTP_STATUS" -eq 404 ] || [ "${{ github.event_name }}" != "schedule" ]; then
             echo "should_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_build=false" >> $GITHUB_OUTPUT
           fi
 
   build:
@@ -67,48 +89,40 @@ jobs:
       - name: 设置版本变量
         id: version
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
-            VERSION_TAG="${{ github.event.inputs.version }}"
-          else
-            VERSION_TAG="${{ needs.check-upstream.outputs.latest-version }}"
-          fi
-          
+          VERSION_TAG="${{ github.event.inputs.version || needs.check-upstream.outputs.latest-version }}"
           [[ ! "$VERSION_TAG" =~ ^v ]] && VERSION_TAG="v${VERSION_TAG}"
           VERSION_NUMBER=${VERSION_TAG#v}
-          
           echo "VERSION_TAG=$VERSION_TAG" >> $GITHUB_ENV
           echo "VERSION_NUMBER=$VERSION_NUMBER" >> $GITHUB_ENV
           echo "IMAGE=ghostchu/peerbanhelper:${VERSION_TAG}" >> $GITHUB_ENV
 
-      - name: 准备构建环境
-        run: |
-          sudo mkdir -p /usr/local/bin
-          sudo chmod 755 /usr/local/bin
-
-      - name: 执行构建脚本 (inline)
-        env:
-          IMAGE: ${{ env.IMAGE }}
-          PBH_VERSION: ${{ env.VERSION_NUMBER }}
+      - name: 构建产物
         run: |
           set -euo pipefail
-          # 确保文件存在再替换，防止 sed 报错
-          [ -f app/docker/docker-compose.yaml ] && sed -i "s#@IMAGE@#${IMAGE}#g" app/docker/docker-compose.yaml
-          [ -f manifest ] && sed -i "s#@PBH_VERSION@#${PBH_VERSION}#g" manifest
+          # 替换变量（增加容错）
+          [ -f app/docker/docker-compose.yaml ] && sed -i "s#@IMAGE@#${{ env.IMAGE }}#g" app/docker/docker-compose.yaml
+          [ -f manifest ] && sed -i "s#@PBH_VERSION@#${{ env.VERSION_NUMBER }}#g" manifest
 
           curl -s -L -f -o /usr/local/bin/fnpack "https://static2.fnnas.com/fnpack/fnpack-1.2.1-linux-amd64"
           sudo chmod +x /usr/local/bin/fnpack
           
           fnpack build
           FPK_FILE=$(ls *.fpk | head -1)
-          mv "${FPK_FILE}" "peerbanhelper-${PBH_VERSION}.fpk"
+          mv "${FPK_FILE}" "peerbanhelper-${{ env.VERSION_NUMBER }}.fpk"
 
-      - name: 创建或更新 Release
+      - name: 发布
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.VERSION_TAG }}
           name: PeerBanHelper ${{ env.VERSION_TAG }}
           body: |
-            自动同步上游版本: ${{ env.VERSION_TAG }}
+            ### 构建信息
+            - **版本号**: `${{ env.VERSION_NUMBER }}`
+            - **上游版本**: [${{ env.VERSION_TAG }}](https://github.com/PBH-BTN/PeerBanHelper/releases/tag/${{ env.VERSION_TAG }})
+            
+            ---
+            
+            ${{ needs.check-upstream.outputs.changelog }}
           files: peerbanhelper-${{ env.VERSION_NUMBER }}.fpk
           overwrite: true
         env:
