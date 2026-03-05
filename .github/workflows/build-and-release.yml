@@ -1,21 +1,21 @@
 name: Build and Release PeerBanHelper
 
 on:
-  # 手动触发
   workflow_dispatch:
     inputs:
       version:
         description: '要构建的版本号（如 v9.2.5）'
         required: false
         type: string
-  # 定期检查上游更新（每天 UTC 0 点执行）
   schedule:
     - cron: '0 0 * * *'
-  # 仓库推送触发（可选）
   push:
     branches:
       - main
       - master
+
+permissions:
+  contents: write
 
 jobs:
   check-upstream:
@@ -24,53 +24,41 @@ jobs:
       latest-version: ${{ steps.check.outputs.version }}
       should-build: ${{ steps.check.outputs.should_build }}
     steps:
-      - name: 检查上游最新版本
+      - name: 检查上游 PeerBanHelper 最新版本
         id: check
         run: |
           UPSTREAM_REPO="PBH-BTN/PeerBanHelper"
-
-          # 使用 releases/latest 获取上游最新稳定发布（自动忽略 prerelease）
-          LATEST_TAG=$(curl -s https://api.github.com/repos/${UPSTREAM_REPO}/releases/latest | jq -r '.tag_name')
+          
+          # 增加 Token 避免速率限制
+          LATEST_TAG=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/${UPSTREAM_REPO}/releases/latest | jq -r '.tag_name')
 
           if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG" == "null" ]; then
-            echo "未找到有效的 release.tag_name，尝试回退到 tags 列表"
-            LATEST_TAG=$(curl -s https://api.github.com/repos/${UPSTREAM_REPO}/tags | jq -r '.[0].name' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+            LATEST_TAG=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              https://api.github.com/repos/${UPSTREAM_REPO}/tags | jq -r '.[0].name')
           fi
 
-          if [ -z "$LATEST_TAG" ]; then
-            echo "未找到有效的版本标签或 release"
-            exit 1
-          fi
-
-          # 去除 'v' 前缀获取纯版本号
-          VERSION_NUMBER=${LATEST_TAG#v}
-
-          echo "上游最新版本: $LATEST_TAG ($VERSION_NUMBER)"
           echo "version=$LATEST_TAG" >> $GITHUB_OUTPUT
-          echo "version_number=$VERSION_NUMBER" >> $GITHUB_OUTPUT
 
-          # 只有在定期检查时才跳过已存在的 Release
-          # push 和 workflow_dispatch 时总是构建（允许覆盖）
           if [ "${{ github.event_name }}" == "schedule" ]; then
-            # 检查本仓库是否已有该版本的 Release
-            EXISTING_RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/tags/${LATEST_TAG} || echo "")
-
-            if [ -z "$EXISTING_RELEASE" ] || [ "$EXISTING_RELEASE" == "null" ]; then
-              echo "需要构建新版本"
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              https://api.github.com/repos/${{ github.repository }}/releases/tags/${LATEST_TAG})
+            
+            if [ "$HTTP_STATUS" -eq 404 ]; then
               echo "should_build=true" >> $GITHUB_OUTPUT
+              echo "检测到新版本: $LATEST_TAG"
             else
-              echo "该版本已存在，跳过构建"
               echo "should_build=false" >> $GITHUB_OUTPUT
+              echo "版本 $LATEST_TAG 已存在，跳过"
             fi
           else
-            # push 和 workflow_dispatch 时总是构建
-            echo "触发方式: ${{ github.event_name }}，总是构建（允许覆盖）"
             echo "should_build=true" >> $GITHUB_OUTPUT
           fi
 
   build:
     needs: check-upstream
-    if: needs.check-upstream.outputs.should-build == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.check-upstream.outputs.should-build == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
@@ -80,28 +68,17 @@ jobs:
         id: version
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
-            # 手动触发且指定了版本
             VERSION_TAG="${{ github.event.inputs.version }}"
           else
-            # 使用上游检查的版本
             VERSION_TAG="${{ needs.check-upstream.outputs.latest-version }}"
           fi
           
-          # 确保版本标签格式正确（如有 'v' 前缀）
-          if [[ ! "$VERSION_TAG" =~ ^v ]]; then
-            VERSION_TAG="v${VERSION_TAG}"
-          fi
-          
-          # 提取纯版本号（去除 'v' 前缀）
+          [[ ! "$VERSION_TAG" =~ ^v ]] && VERSION_TAG="v${VERSION_TAG}"
           VERSION_NUMBER=${VERSION_TAG#v}
           
           echo "VERSION_TAG=$VERSION_TAG" >> $GITHUB_ENV
           echo "VERSION_NUMBER=$VERSION_NUMBER" >> $GITHUB_ENV
           echo "IMAGE=ghostchu/peerbanhelper:${VERSION_TAG}" >> $GITHUB_ENV
-          
-          echo "构建版本: $VERSION_TAG"
-          echo "版本号: $VERSION_NUMBER"
-          echo "Docker 镜像: ghostchu/peerbanhelper:${VERSION_TAG}"
 
       - name: 准备构建环境
         run: |
@@ -114,57 +91,16 @@ jobs:
           PBH_VERSION: ${{ env.VERSION_NUMBER }}
         run: |
           set -euo pipefail
-          echo "替换占位符: IMAGE=${IMAGE}, PBH_VERSION=${PBH_VERSION}"
-          sed -i "s#@IMAGE@#${IMAGE}#g" app/docker/docker-compose.yaml
-          sed -i "s#@PBH_VERSION@#${PBH_VERSION}#g" manifest
+          # 确保文件存在再替换，防止 sed 报错
+          [ -f app/docker/docker-compose.yaml ] && sed -i "s#@IMAGE@#${IMAGE}#g" app/docker/docker-compose.yaml
+          [ -f manifest ] && sed -i "s#@PBH_VERSION@#${PBH_VERSION}#g" manifest
 
-          echo "Downloading fnpack..."
-          FNPACK_URL="https://static2.fnnas.com/fnpack/fnpack-1.2.1-linux-amd64"
-          FNPACK_TMP=$(mktemp)
-
-          curl -s -L -f -o "${FNPACK_TMP}" "${FNPACK_URL}"
-          if [ $? -ne 0 ] || [ ! -f "${FNPACK_TMP}" ]; then
-            echo "错误: 下载 fnpack 失败"
-            exit 1
-          fi
-
-          sudo mv "${FNPACK_TMP}" /usr/local/bin/fnpack
+          curl -s -L -f -o /usr/local/bin/fnpack "https://static2.fnnas.com/fnpack/fnpack-1.2.1-linux-amd64"
           sudo chmod +x /usr/local/bin/fnpack
-
-          if ! command -v fnpack &> /dev/null; then
-            echo "错误: fnpack 安装后无法执行"
-            exit 1
-          fi
-
-          echo "fnpack 安装成功"
-
-          echo "Building package..."
+          
           fnpack build
-
           FPK_FILE=$(ls *.fpk | head -1)
-          if [ -z "${FPK_FILE}" ]; then
-            echo "错误: 未找到 .fpk 文件"
-            exit 1
-          fi
-
-          NEW_NAME="peerbanhelper-${PBH_VERSION}.fpk"
-          mv "${FPK_FILE}" "${NEW_NAME}"
-          echo "构建产物已重命名为: ${NEW_NAME}"
-
-      - name: 上传构建产物
-        uses: actions/upload-artifact@v4
-        with:
-          name: package-${{ env.VERSION_TAG }}
-          path: peerbanhelper-${{ env.VERSION_NUMBER }}.fpk
-          retention-days: 30
-
-      - name: 验证构建产物
-        run: |
-          if [ ! -f "peerbanhelper-${{ env.VERSION_NUMBER }}.fpk" ]; then
-            echo "错误: 构建产物不存在"
-            exit 1
-          fi
-          ls -lh peerbanhelper-${{ env.VERSION_NUMBER }}.fpk
+          mv "${FPK_FILE}" "peerbanhelper-${PBH_VERSION}.fpk"
 
       - name: 创建或更新 Release
         uses: softprops/action-gh-release@v1
@@ -172,14 +108,8 @@ jobs:
           tag_name: ${{ env.VERSION_TAG }}
           name: PeerBanHelper ${{ env.VERSION_TAG }}
           body: |
-            基于上游 [PBH-BTN/PeerBanHelper@${{ env.VERSION_TAG }}](https://github.com/PBH-BTN/PeerBanHelper/releases/tag/${{ env.VERSION_TAG }}) 构建
-            
-            ### 变更
-            - 版本: ${{ env.VERSION_NUMBER }}
-            - Docker 镜像: `ghostchu/peerbanhelper:${{ env.VERSION_TAG }}`
+            自动同步上游版本: ${{ env.VERSION_TAG }}
           files: peerbanhelper-${{ env.VERSION_NUMBER }}.fpk
-          draft: false
-          prerelease: false
           overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
