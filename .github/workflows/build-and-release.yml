@@ -53,7 +53,7 @@ jobs:
           if [ -n "$RAW_BODY" ] && [ "$RAW_BODY" != "null" ]; then
             # 匹配包含 兼容性、修复、功能、改进 的二级标题章节
             # p 命令打印，最后用 sed '$d' 去掉截取到的下一个章节标题行
-            LOG=$(echo "$RAW_BODY" | sed -n '/##.*\(兼容性\|修复\|功能\|改进\)/,/##/p' | sed '$d')
+            LOG=$(echo "$RAW_BODY" | sed -n '/##.*\(兼容性\|修复\|优化\|功能\|改进\)/,/##/p' | sed '$d')
           fi
           
           if [ -z "$LOG" ]; then
